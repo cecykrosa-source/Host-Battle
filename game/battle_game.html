@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Host Battle Game</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #111827;
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      gap: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.8rem;
+    }
+
+    .controls {
+      background: #1f2937;
+      padding: 16px 20px;
+      border-radius: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+
+    label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    select, button {
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: none;
+      font-size: 0.95rem;
+    }
+
+    select {
+      background: #111827;
+      color: #e5e7eb;
+    }
+
+    button {
+      background: #10b981;
+      color: #022c22;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #4b5563;
+      cursor: default;
+      color: #9ca3af;
+    }
+
+    .battlefield {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    .fighter {
+      flex: 1 1 250px;
+      background: #1f2937;
+      padding: 14px 16px;
+      border-radius: 16px;
+      position: relative;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+
+    .fighter h2 {
+      margin: 0 0 6px;
+      font-size: 1.1rem;
+    }
+
+    .statline {
+      font-size: 0.8rem;
+      opacity: 0.9;
+      margin-bottom: 8px;
+    }
+
+    .hp-label {
+      font-size: 0.85rem;
+      margin-bottom: 4px;
+    }
+
+    .hp-bar {
+      width: 100%;
+      height: 16px;
+      background: #374151;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .hp-fill {
+      height: 100%;
+      width: 100%;
+      background: #10b981;
+      transition: width 0.3s ease;
+    }
+
+    .fighter.dead .hp-fill {
+      background: #ef4444;
+    }
+
+    .sprite-box {
+      margin-top: 10px;
+      height: 80px;
+      border-radius: 12px;
+      background: #111827;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+
+    .log {
+      width: 100%;
+      max-width: 800px;
+      background: #020617;
+      border-radius: 16px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.8rem;
+      max-height: 260px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .turn-indicator {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-size: 0.75rem;
+      background: #10b981;
+      color: #022c22;
+      padding: 2px 8px;
+      border-radius: 999px;
+      display: none;
+    }
+
+    .fighter.active .turn-indicator {
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <h1>Host Battle Game</h1>
+
+  <div class="controls">
+    <div>
+      <label for="fighterA">Fighter A:</label><br />
+      <select id="fighterA"></select>
+    </div>
+    <div>
+      <label for="fighterB">Fighter B:</label><br />
+      <select id="fighterB"></select>
+    </div>
+    <button id="startBtn">Start Battle</button>
+  </div>
+
+  <div class="battlefield">
+    <div class="fighter" id="fighterACard">
+      <div class="turn-indicator">TURN</div>
+      <h2 id="nameA">–</h2>
+      <div class="statline" id="statsA"></div>
+      <div class="hp-label" id="hpTextA">HP: –</div>
+      <div class="hp-bar">
+        <div class="hp-fill" id="hpFillA"></div>
+      </div>
+      <div class="sprite-box" id="spriteA">
+        Sprite / image placeholder 🎨
+      </div>
+    </div>
+
+    <div class="fighter" id="fighterBCard">
+      <div class="turn-indicator">TURN</div>
+      <h2 id="nameB">–</h2>
+      <div class="statline" id="statsB"></div>
+      <div class="hp-label" id="hpTextB">HP: –</div>
+      <div class="hp-bar">
+        <div class="hp-fill" id="hpFillB"></div>
+      </div>
+      <div class="sprite-box" id="spriteB">
+        Sprite / image placeholder 🎨
+      </div>
+    </div>
+  </div>
+
+  <div class="log" id="log"></div>
+
+  <script>
+    // ===============================
+    // 1. HOST LIST (ADD MORE HERE)
+    // ===============================
+    const HOSTS = [
+      {
+        id: "host1",
+        name: "Host1",
+        maxHp: 100,
+        attack: 10,
+        defense: 4,
+        speed: 8,
+        spriteText: "Host1 sprite"
+      },
+      {
+        id: "chatboss",
+        name: "ChatBoss",
+        maxHp: 100,
+        attack: 8,
+        defense: 6,
+        speed: 6,
+        spriteText: "ChatBoss sprite"
+      },
+      {
+        id: "gremlin",
+        name: "Gremlin",
+        maxHp: 80,
+        attack: 12,
+        defense: 2,
+        speed: 10,
+        spriteText: "Little chaos gremlin"
+      }
+    ];
+
+    // ===============================
+    // 2. CURRENT FIGHT STATE
+    // ===============================
+    let currentFight = null;
+    let fightTimer = null;
+
+    function createFighterState(host) {
+      return {
+        id: host.id,
+        name: host.name,
+        maxHp: host.maxHp,
+        hp: host.maxHp,
+        attack: host.attack,
+        defense: host.defense,
+        speed: host.speed,
+        spriteText: host.spriteText
+      };
+    }
+
+    // ===============================
+    // 3. UI HELPERS
+    // ===============================
+    function $(id) {
+      return document.getElementById(id);
+    }
+
+    function logMessage(text) {
+      const log = $("log");
+      log.textContent += text + "\n";
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog() {
+      $("log").textContent = "";
+    }
+
+    function updateFighterUI(side, fighter) {
+      const nameEl = side === "A" ? $("nameA") : $("nameB");
+      const statsEl = side === "A" ? $("statsA") : $("statsB");
+      const hpTextEl = side === "A" ? $("hpTextA") : $("hpTextB");
+      const hpFillEl = side === "A" ? $("hpFillA") : $("hpFillB");
+      const spriteBox = side === "A" ? $("spriteA") : $("spriteB");
+      const card = side === "A" ? $("fighterACard") : $("fighterBCard");
+
+      if (!fighter) {
+        nameEl.textContent = "–";
+        statsEl.textContent = "";
+        hpTextEl.textContent = "HP: –";
+        hpFillEl.style.width = "0%";
+        spriteBox.textContent = "Sprite / image placeholder 🎨";
+        card.classList.remove("dead", "active");
+        return;
+      }
+
+      nameEl.textContent = fighter.name;
+      statsEl.textContent = `ATK: ${fighter.attack} | DEF: ${fighter.defense} | SPD: ${fighter.speed}`;
+
+      const hpPercent = Math.max(0, (fighter.hp / fighter.maxHp) * 100);
+      hpTextEl.textContent = `HP: ${fighter.hp} / ${fighter.maxHp}`;
+      hpFillEl.style.width = hpPercent + "%";
+
+      if (fighter.hp <= 0) {
+        card.classList.add("dead");
+      } else {
+        card.classList.remove("dead");
+      }
+
+      spriteBox.textContent = fighter.spriteText || "Sprite / image placeholder 🎨";
+    }
+
+    function setActiveTurn(side) {
+      const cardA = $("fighterACard");
+      const cardB = $("fighterBCard");
+      cardA.classList.toggle("active", side === "A");
+      cardB.classList.toggle("active", side === "B");
+    }
+
+    // ===============================
+    // 4. BATTLE LOGIC
+    // ===============================
+    function calculateDamage(attacker, defender) {
+      const base = attacker.attack - defender.defense;
+      const variation = Math.floor(Math.random() * 5) - 2; // -2 to +2
+      let damage = base + variation;
+      if (damage < 1) damage = 1;
+      return damage;
+    }
+
+    function runTurn() {
+      if (!currentFight) return;
+
+      const { fighterA, fighterB, turnSide } = currentFight;
+      if (fighterA.hp <= 0 || fighterB.hp <= 0) {
+        endFight();
+        return;
+      }
+
+      const attacker = turnSide === "A" ? fighterA : fighterB;
+      const defender = turnSide === "A" ? fighterB : fighterA;
+
+      const damage = calculateDamage(attacker, defender);
+      defender.hp -= damage;
+      if (defender.hp < 0) defender.hp = 0;
+
+      logMessage(`${attacker.name} hits ${defender.name} for ${damage} damage!`);
+
+      updateFighterUI("A", fighterA);
+      updateFighterUI("B", fighterB);
+
+      if (defender.hp <= 0) {
+        logMessage(`💥 ${defender.name} is defeated!`);
+        logMessage(`🏆 Winner: ${attacker.name}`);
+        endFight();
+        return;
+      }
+
+      currentFight.turnSide = turnSide === "A" ? "B" : "A";
+      setActiveTurn(currentFight.turnSide);
+    }
+
+    function startFightFromUI() {
+      if (fightTimer) {
+        clearInterval(fightTimer);
+        fightTimer = null;
+      }
+
+      const selectA = $("fighterA");
+      const selectB = $("fighterB");
+      const idA = selectA.value;
+      const idB = selectB.value;
+
+      if (!idA || !idB || idA === idB) {
+        alert("Please choose two different hosts.");
+        return;
+      }
+
+      const hostA = HOSTS.find(h => h.id === idA);
+      const hostB = HOSTS.find(h => h.id === idB);
+
+      const fighterA = createFighterState(hostA);
+      const fighterB = createFighterState(hostB);
+
+      let firstTurnSide = "A";
+      if (fighterB.speed > fighterA.speed) {
+        firstTurnSide = "B";
+      } else if (fighterB.speed === fighterA.speed) {
+        firstTurnSide = Math.random() < 0.5 ? "A" : "B";
+      }
+
+      currentFight = {
+        fighterA,
+        fighterB,
+        turnSide: firstTurnSide
+      };
+
+      clearLog();
+      logMessage(`🔥 Battle start: ${fighterA.name} vs. ${fighterB.name}`);
+      logMessage(`${currentFight.turnSide === "A" ? fighterA.name : fighterB.name} attacks first (higher speed)!`);
+
+      updateFighterUI("A", fighterA);
+      updateFighterUI("B", fighterB);
+      setActiveTurn(currentFight.turnSide);
+
+      $("startBtn").disabled = true;
+      fightTimer = setInterval(runTurn, 1000);
+    }
+
+    function endFight() {
+      if (fightTimer) {
+        clearInterval(fightTimer);
+        fightTimer = null;
+      }
+      setActiveTurn(null);
+      $("startBtn").disabled = false;
+    }
+
+    // ===============================
+    // 5. INITIALIZATION
+    // ===============================
+    function init() {
+      const selectA = $("fighterA");
+      const selectB = $("fighterB");
+
+      HOSTS.forEach(host => {
+        const optA = document.createElement("option");
+        optA.value = host.id;
+        optA.textContent = host.name;
+        selectA.appendChild(optA);
+
+        const optB = document.createElement("option");
+        optB.value = host.id;
+        optB.textContent = host.name;
+        selectB.appendChild(optB);
+      });
+
+      if (HOSTS[0]) selectA.value = HOSTS[0].id;
+      if (HOSTS[1]) selectB.value = HOSTS[1].id;
+
+      $("startBtn").addEventListener("click", startFightFromUI);
+
+      updateFighterUI("A", null);
+      updateFighterUI("B", null);
+    }
+
+    window.addEventListener("load", init);
+  </script>
+</body>
+</html>
